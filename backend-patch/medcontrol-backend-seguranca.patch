@@ -1,0 +1,279 @@
+diff -u a/src/app/api/listas/route.ts b/src/app/api/listas/route.ts
+--- a/src/app/api/listas/route.ts	2026-11-06 19:03:04.646746775 +0000
++++ b/src/app/api/listas/route.ts	2026-11-08 11:46:03.230011962 +0000
+@@ -9,7 +9,7 @@
+   copiarModelo,
+   reivindicarListas,
+ } from '@/lib/repository';
+-import { obterUsuarioId } from '@/lib/usuario-context';
++import { ERRO_ACESSO_NEGADO, obterUsuarioId } from '@/lib/usuario-context';
+ 
+ export async function GET(request: NextRequest) {
+   try {
+@@ -22,6 +22,9 @@
+     }
+ 
+     const usuarioId = obterUsuarioId(request);
++    if (!usuarioId) {
++      return NextResponse.json({ error: 'Identificação do dispositivo (X-Device-Id) obrigatória' }, { status: 400 });
++    }
+     const listas = await obterListas(usuarioId || undefined);
+     return NextResponse.json(listas);
+   } catch (error: any) {
+@@ -33,6 +36,9 @@
+ export async function POST(request: NextRequest) {
+   try {
+     const usuarioId = obterUsuarioId(request);
++    if (!usuarioId) {
++      return NextResponse.json({ error: 'Identificação do dispositivo (X-Device-Id) obrigatória' }, { status: 400 });
++    }
+     const body: { nome: string; acao?: 'criar' | 'copiar' | 'reivindicar' | 'adotar-modelo'; id?: string } = await request.json();
+ 
+     if (body.acao === 'reivindicar') {
+@@ -60,9 +66,12 @@
+       return NextResponse.json({ error: 'Nome obrigatório' }, { status: 400 });
+     }
+ 
+-    const lista = await criarLista(body.nome, usuarioId || undefined);
++    const lista = await criarLista(body.nome, usuarioId || undefined, body.id);
+     return NextResponse.json(lista, { status: 201 });
+   } catch (error: any) {
++    if (error?.message === ERRO_ACESSO_NEGADO) {
++      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
++    }
+     console.error('Erro ao criar lista:', error);
+     return NextResponse.json({ error: 'Erro ao criar lista' }, { status: 500 });
+   }
+@@ -71,6 +80,9 @@
+ export async function PATCH(request: NextRequest) {
+   try {
+     const usuarioId = obterUsuarioId(request);
++    if (!usuarioId) {
++      return NextResponse.json({ error: 'Identificação do dispositivo (X-Device-Id) obrigatória' }, { status: 400 });
++    }
+     const body: { id: string; nome: string } = await request.json();
+ 
+     if (!body.id || !body.nome) {
+@@ -95,6 +107,9 @@
+ 
+   try {
+     const usuarioId = obterUsuarioId(request);
++    if (!usuarioId) {
++      return NextResponse.json({ error: 'Identificação do dispositivo (X-Device-Id) obrigatória' }, { status: 400 });
++    }
+     await deletarLista(id, usuarioId || undefined);
+     return NextResponse.json({ success: true });
+   } catch (error: any) {
+diff -u a/src/app/api/remedios/route.ts b/src/app/api/remedios/route.ts
+--- a/src/app/api/remedios/route.ts	2026-11-06 19:03:04.651623385 +0000
++++ b/src/app/api/remedios/route.ts	2026-11-08 11:46:03.229879207 +0000
+@@ -1,6 +1,6 @@
+ import { NextRequest, NextResponse } from 'next/server';
+ import { obterRemedios, salvarRemedio, removerRemedio } from '@/lib/repository';
+-import { obterUsuarioId } from '@/lib/usuario-context';
++import { ERRO_ACESSO_NEGADO, obterUsuarioId } from '@/lib/usuario-context';
+ import type { Remedio } from '@/types/remedio';
+ 
+ export async function GET(request: NextRequest) {
+@@ -9,6 +9,9 @@
+ 
+   try {
+     const usuarioId = obterUsuarioId(request);
++    if (!usuarioId) {
++      return NextResponse.json({ error: 'Identificação do dispositivo (X-Device-Id) obrigatória' }, { status: 400 });
++    }
+     const remedios = await obterRemedios(listaId, usuarioId || undefined);
+     return NextResponse.json(remedios);
+   } catch (error: any) {
+@@ -20,10 +23,16 @@
+ export async function POST(request: NextRequest) {
+   try {
+     const usuarioId = obterUsuarioId(request);
++    if (!usuarioId) {
++      return NextResponse.json({ error: 'Identificação do dispositivo (X-Device-Id) obrigatória' }, { status: 400 });
++    }
+     const body: Remedio = await request.json();
+     const salvo = await salvarRemedio(body, usuarioId || undefined);
+     return NextResponse.json(salvo, { status: 201 });
+   } catch (error: any) {
++    if (error?.message === ERRO_ACESSO_NEGADO) {
++      return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
++    }
+     console.error('Erro ao salvar remédio:', error);
+     return NextResponse.json({ error: 'Erro ao salvar remédio' }, { status: 500 });
+   }
+@@ -39,6 +48,9 @@
+ 
+   try {
+     const usuarioId = obterUsuarioId(request);
++    if (!usuarioId) {
++      return NextResponse.json({ error: 'Identificação do dispositivo (X-Device-Id) obrigatória' }, { status: 400 });
++    }
+     await removerRemedio(id, usuarioId || undefined);
+     return NextResponse.json({ success: true });
+   } catch (error: any) {
+diff -u a/src/app/api/remedios-tomados/route.ts b/src/app/api/remedios-tomados/route.ts
+--- a/src/app/api/remedios-tomados/route.ts	2026-11-06 19:03:04.652596952 +0000
++++ b/src/app/api/remedios-tomados/route.ts	2026-11-08 11:46:03.229568877 +0000
+@@ -15,6 +15,9 @@
+ 
+   try {
+     const usuarioId = obterUsuarioId(request);
++    if (!usuarioId) {
++      return NextResponse.json({ error: 'Identificação do dispositivo (X-Device-Id) obrigatória' }, { status: 400 });
++    }
+     const tomados = await obterRemediosTomados(listaId, usuarioId || undefined);
+     return NextResponse.json(tomados);
+   } catch (error: any) {
+@@ -26,6 +29,9 @@
+ export async function POST(request: NextRequest) {
+   try {
+     const usuarioId = obterUsuarioId(request);
++    if (!usuarioId) {
++      return NextResponse.json({ error: 'Identificação do dispositivo (X-Device-Id) obrigatória' }, { status: 400 });
++    }
+     const body: RemedioTomado = await request.json();
+     await salvarRemedioTomado(body, usuarioId || undefined);
+     return NextResponse.json({ success: true }, { status: 201 });
+@@ -64,6 +70,9 @@
+ 
+   try {
+     const usuarioId = obterUsuarioId(request);
++    if (!usuarioId) {
++      return NextResponse.json({ error: 'Identificação do dispositivo (X-Device-Id) obrigatória' }, { status: 400 });
++    }
+     await removerRemedioTomado(remedioId, periodo, horario, data, usuarioId || undefined);
+     return NextResponse.json({ success: true });
+   } catch (error: any) {
+@@ -85,6 +94,9 @@
+ 
+   try {
+     const usuarioId = obterUsuarioId(request);
++    if (!usuarioId) {
++      return NextResponse.json({ error: 'Identificação do dispositivo (X-Device-Id) obrigatória' }, { status: 400 });
++    }
+     const tomado = await verificarRemedioTomado(remedioId, periodo, horario, data, usuarioId || undefined);
+     return NextResponse.json({ tomado });
+   } catch (error: any) {
+diff -u a/src/app/vinculo/page.tsx b/src/app/vinculo/page.tsx
+--- a/src/app/vinculo/page.tsx	1970-01-01 00:00:00.000000000 +0000
++++ b/src/app/vinculo/page.tsx	2026-11-08 11:46:40.990245617 +0000
+@@ -0,0 +1,59 @@
++'use client';
++
++import { useEffect, useState } from 'react';
++import { getDeviceId } from '@/lib/device-id';
++
++/**
++ * Mostra o código de vínculo deste dispositivo para usar no app MedControl (Android/iOS):
++ * no app, abra Configurações → "Código de vínculo" e cole este código.
++ * Trate o código como uma senha: quem o tiver acessa os mesmos remédios.
++ */
++export default function VinculoPage() {
++  const [codigo, setCodigo] = useState('');
++  const [visivel, setVisivel] = useState(false);
++  const [copiado, setCopiado] = useState(false);
++
++  useEffect(() => {
++    setCodigo(getDeviceId());
++  }, []);
++
++  const copiar = async () => {
++    try {
++      await navigator.clipboard.writeText(codigo);
++      setCopiado(true);
++      setTimeout(() => setCopiado(false), 2000);
++    } catch {
++      setVisivel(true); // sem permissão de área de transferência: mostra para copiar à mão
++    }
++  };
++
++  return (
++    <main style={{ maxWidth: 480, margin: '0 auto', padding: 24, fontFamily: 'system-ui, sans-serif' }}>
++      <h1 style={{ fontSize: 24, marginBottom: 8 }}>Código de vínculo</h1>
++      <p style={{ opacity: 0.75, lineHeight: 1.5 }}>
++        Use este código no app MedControl (em Configurações → Código de vínculo) para acessar os mesmos remédios neste
++        e em outros aparelhos. <strong>Trate-o como uma senha.</strong>
++      </p>
++      <div
++        style={{
++          margin: '20px 0',
++          padding: 14,
++          borderRadius: 12,
++          border: '1.5px solid rgba(128,128,128,0.4)',
++          wordBreak: 'break-all',
++          fontFamily: 'monospace',
++        }}
++      >
++        {visivel ? codigo || '…' : '••••••••-••••-••••-••••-••••••••••••'}
++      </div>
++      <div style={{ display: 'flex', gap: 10 }}>
++        <button onClick={() => setVisivel((v) => !v)} style={{ flex: 1, padding: 12, borderRadius: 12 }}>
++          {visivel ? 'Ocultar' : 'Mostrar'}
++        </button>
++        <button onClick={copiar} disabled={!codigo} style={{ flex: 1, padding: 12, borderRadius: 12 }}>
++          {copiado ? 'Copiado!' : 'Copiar'}
++        </button>
++      </div>
++    </main>
++  );
++}
+diff -u a/src/lib/repository.ts b/src/lib/repository.ts
+--- a/src/lib/repository.ts	2026-11-06 19:03:04.885387249 +0000
++++ b/src/lib/repository.ts	2026-11-08 11:46:03.230240489 +0000
+@@ -173,6 +173,8 @@
+   const existente = await prisma.remedio.findUnique({ where: { id: remedio.id } });
+ 
+   if (existente) {
++    // Só o dono pode atualizar (antes, qualquer cliente que soubesse o id sobrescrevia o remédio de outro usuário)
++    if ((existente.usuarioId ?? null) !== (usuarioId ?? null)) throw new Error('ACESSO_NEGADO');
+     const atualizado = await prisma.remedio.update({
+       where: { id: remedio.id },
+       data: dbData,
+@@ -286,10 +288,21 @@
+ 
+ // ========== FUNÇÕES DE LISTAS ==========
+ 
+-export async function criarLista(nome: string, usuarioId?: string): Promise<ListaRemedios> {
+-  const prisma = getPrisma();
++/**
++ * Cria uma lista. Se `id` for informado (app móvel offline-first), a criação é idempotente:
++ * repetir a chamada devolve a mesma lista, e um id que pertence a outro usuário é recusado.
++ */
++export async function criarLista(nome: string, usuarioId?: string, id?: string): Promise<ListaRemedios> {
++  const prisma = getPrisma();
++  if (id) {
++    const existente = await prisma.listaRemedios.findUnique({ where: { id } });
++    if (existente) {
++      if ((existente.usuarioId ?? null) !== (usuarioId ?? null)) throw new Error('ACESSO_NEGADO');
++      return mapListaFromDB(existente);
++    }
++  }
+   const lista = await prisma.listaRemedios.create({
+-    data: { nome, usuarioId: usuarioId || null },
++    data: { ...(id ? { id } : {}), nome, usuarioId: usuarioId || null },
+   });
+   return mapListaFromDB(lista);
+ }
+@@ -324,6 +337,7 @@
+   const prisma = getPrisma();
+   const original = await prisma.listaRemedios.findUnique({ where: { id }, include: { remedios: true } });
+   if (!original) throw new Error('Lista não encontrada');
++  if ((original.usuarioId ?? null) !== (usuarioId ?? null)) throw new Error('ACESSO_NEGADO');
+ 
+   const novaLista = await prisma.listaRemedios.create({
+     data: { nome: `${original.nome} (cópia)`, usuarioId: usuarioId || null },
+diff -u a/src/lib/usuario-context.ts b/src/lib/usuario-context.ts
+--- a/src/lib/usuario-context.ts	2026-11-06 19:03:04.891070983 +0000
++++ b/src/lib/usuario-context.ts	2026-11-08 11:46:03.229125203 +0000
+@@ -1,5 +1,9 @@
+ import { NextRequest } from 'next/server';
+ 
+ export function obterUsuarioId(request: NextRequest): string | null {
+-  return request.headers.get('X-Device-Id') || null;
++  const id = request.headers.get('X-Device-Id');
++  // Formato aceito: UUID ou qualquer token [A-Za-z0-9_-] de 8 a 128 caracteres (cobre o id gerado pelo PWA).
++  return id && /^[A-Za-z0-9_-]{8,128}$/.test(id) ? id : null;
+ }
++
++export const ERRO_ACESSO_NEGADO = 'ACESSO_NEGADO';
